@@ -63,8 +63,8 @@
         .map-input-group { background: var(--m3-surface-low); border-radius: 12px; padding: 8px; margin-bottom: 10px; }
         .map-input-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
         .map-input-row:last-child { margin-bottom: 0; }
-        .map-input-row input { flex: 1; height: 38px; border: none; background: var(--m3-surface); border-radius: 8px; padding: 0 12px; font-size: 14px; font-weight: 700; outline: none; color: var(--m3-surf-text); min-width: 0; }
-        .map-input-row input:focus { box-shadow: 0 0 0 2px var(--m3-primary-cont); }
+        .map-input-row input[type="text"] { flex: 1; height: 38px; border: none; background: var(--m3-surface); border-radius: 8px; padding: 0 12px; font-size: 14px; font-weight: 700; outline: none; color: var(--m3-surf-text); min-width: 0; }
+        .map-input-row input[type="text"]:focus { box-shadow: 0 0 0 2px var(--m3-primary-cont); }
         
         .input-row { display: flex; gap: 8px; margin-bottom: 12px; width: 100%; }
         .input-box, .select-box { flex: 1; height: 42px; border-radius: 10px; border: 1px solid var(--m3-outline-variant); background: var(--m3-surface); padding: 0 12px; font-size: 14px; font-weight: 700; outline: none; color: var(--m3-surf-text); min-width: 0; }
@@ -154,6 +154,7 @@
                 <div id="eats-inputs" class="map-input-group" style="display:none;">
                     <div class="map-input-row">
                         <input type="text" id="in-pick-eats" placeholder="PICKUP">
+                        <input type="checkbox" id="chkEatsPin" style="accent-color:var(--m3-primary); margin-left:8px; width:22px; height:22px;">
                     </div>
                     <div class="map-input-row">
                         <input type="text" id="in-drop-eats" placeholder="DROPOFF">
@@ -379,7 +380,6 @@
                 let parsed = JSON.parse(data);
                 if (Array.isArray(defaultVal) && !Array.isArray(parsed)) return defaultVal;
                 
-                // Migrate legacy terms
                 if (Array.isArray(parsed)) {
                     parsed.forEach(o => {
                         if (o.mode === 'QS') o.mode = 'QUICKS';
@@ -425,7 +425,6 @@
         function closeConfirm() { document.getElementById('popConfirm').classList.remove('show'); confirmCallback = null; }
         document.getElementById('btnConfirmAction').addEventListener('click', () => { if(confirmCallback) confirmCallback(); closeConfirm(); });
 
-        /* 백그라운드 자동화 엔진 */
         function checkAutoActions() {
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
@@ -448,7 +447,7 @@
                     else if (wakeLockObj) { await wakeLockObj.release(); wakeLockObj = null; }
                     localStorage.setItem('qcp_wakelock', enable ? 'ON' : 'OFF');
                 } catch (err) { console.log("Wakelock Error", err); }
-            } else { if(enable) showToast("WAKELOCK NOT SUPPORTED"); }
+            } else { if(enable) showToast("NO WAKELOCK"); }
         }
         document.addEventListener('visibilitychange', () => {
             if (wakeLockObj !== null && document.visibilityState === 'visible') { toggleWakeLock(true); }
@@ -460,7 +459,6 @@
             document.getElementById('set-wakelock').checked = wlState;
             if(wlState) toggleWakeLock(true);
             
-            // Build Timetable Pop-up
             document.getElementById('qtrPopupGrid').innerHTML = SHIFTS.map(s => `<div class="stats-box" style="padding:10px;"><div style="font-size:14px; color:var(--m3-primary);">${s.name}</div><div style="font-size:11px; margin-top:4px;">${s.start}:00 - ${s.end}:00</div></div>`).join('');
         }
 
@@ -500,14 +498,13 @@
 
         async function syncWithCloud(manual = false) {
             const url = document.getElementById('sheet-url').value.trim();
-            if(!url || !url.startsWith('https://script.google.com/')) { if(manual) showToast("SYNC URL IS REQUIRED"); return; }
-            if(manual) showToast("☁️ SYNCING DATA...");
+            if(!url || !url.startsWith('https://script.google.com/')) { if(manual) showToast("URL REQ"); return; }
+            if(manual) showToast("SYNCING...");
 
             const now = new Date();
             const dateStr = `${String(now.getMonth()+1).padStart(2,'0')}월 ${String(now.getDate()).padStart(2,'0')}일`;
             
             let todayOrders = orders.filter(o => o.state === 'FIN');
-            // 연대순(과거순) 정렬
             todayOrders.sort((a, b) => a.timestamp - b.timestamp);
 
             let todayEXP = costs.filter(c => c.type === 'EXP'); 
@@ -533,7 +530,7 @@
                 }))
             };
 
-            try { await fetch(url, { method: 'POST', body: JSON.stringify(payload) }); if(manual) showToast("✅ SYNC COMPLETE!"); } catch(e) { if(manual) showToast("❌ SYNC FAILED"); }
+            try { await fetch(url, { method: 'POST', body: JSON.stringify(payload) }); if(manual) showToast("SYNC OK"); } catch(e) { if(manual) showToast("SYNC ERR"); }
         }
 
         function updateClockLoop() {
@@ -557,16 +554,16 @@
             localStorage.setItem('qcp_url_sheet', document.getElementById('sheet-url').value.trim()); 
             localStorage.setItem('qcp_key_tmap', document.getElementById('tmap-key').value.trim()); 
             localStorage.setItem('qcp_oil_interval', document.getElementById('oil-interval').value.trim());
-            closeModal('popSet'); showToast("SETTINGS SAVED"); 
+            closeModal('popSet'); showToast("SAVED"); 
         }
 
-        function factoryReset() { openConfirm("FACTORY RESET?", () => { localStorage.clear(); location.reload(); }); }
+        function factoryReset() { openConfirm("RESET SYSTEM?", () => { localStorage.clear(); location.reload(); }); }
         function toggleModal(id) { document.getElementById(id).classList.add('show'); }
         function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
         function clearInputs() {
             ['in-pick-quicks', 'in-drop-quicks', 'in-pick-eats', 'in-drop-eats', 'in-fare', 'in-memo'].forEach(id => document.getElementById(id).value = '');
-            showToast("INPUTS CLEARED");
+            showToast("CLEARED");
         }
 
         function searchTmapActive() {
@@ -581,7 +578,7 @@
 
         async function searchTmap(pickId, dropId) {
             const apiKey = localStorage.getItem('qcp_key_tmap');
-            if(!apiKey) { showToast("TMAP API KEY IS REQUIRED"); return; }
+            if(!apiKey) { showToast("KEY REQ"); return; }
             const pickIn = document.getElementById(pickId); const dropIn = document.getElementById(dropId);
             
             const doSearch = async (inputEl) => {
@@ -598,27 +595,26 @@
                             if(poi.lowerAddrName) addr += ` (${poi.lowerAddrName})`;
                         } else { addr = `${poi.upperAddrName} ${poi.middleAddrName} ${poi.lowerAddrName}`; }
                         inputEl.value = addr.trim().replace(/\s+/g, ' '); 
-                    } else { showToast(`NO RESULTS: ${keyword}`); }
-                } catch (e) { showToast("TMAP API ERROR"); }
+                    } else { showToast(`NO RES: ${keyword}`); }
+                } catch (e) { showToast("API ERR"); }
             };
 
-            if(pickIn.value || dropIn.value) showToast("SEARCHING TMAP...");
+            if(pickIn.value || dropIn.value) showToast("LOADING MAP");
             if(pickIn.value) await doSearch(pickIn); if(dropIn.value) await doSearch(dropIn);
         }
 
-        /* v1.6.9 카카오맵 경로 연동 교정 로직 (좌표 변환 후 앱 스킴 호출) */
         async function openRouteMap(startId, endId) {
             const startStr = document.getElementById(startId).value.trim(); 
             const endStr = document.getElementById(endId).value.trim();
-            if(!startStr || !endStr) { showToast("CHECK INPUTS"); return; }
+            if(!startStr || !endStr) { showToast("BAD INPUT"); return; }
             
             const apiKey = localStorage.getItem('qcp_key_tmap');
             if(!apiKey) { 
-                showToast("TMAP API KEY REQUIRED FOR MAP"); 
+                showToast("KEY REQ"); 
                 return; 
             }
 
-            showToast("LOADING MAP...");
+            showToast("LOADING MAP");
 
             const getCoord = async (keyword) => {
                 try {
@@ -636,17 +632,15 @@
             const endCoord = await getCoord(endStr);
 
             if(startCoord && endCoord) {
-                // 카카오맵 앱 실행 (길찾기 스킴)
                 const scheme = `kakaomap://route?sp=${startCoord.lat},${startCoord.lon}&ep=${endCoord.lat},${endCoord.lon}&by=CAR`;
                 window.location.href = scheme;
                 
-                // 앱이 미설치 된 경우 모바일웹으로 이동하는 Fallback
                 setTimeout(() => {
                     if (document.hidden) return; 
                     window.open(`https://map.kakao.com/link/to/${encodeURIComponent(endStr)},${endCoord.lat},${endCoord.lon}`, '_blank');
                 }, 1500);
             } else {
-                showToast("FAILED TO PARSE COORDINATES");
+                showToast("COORD ERR");
             }
         }
 
@@ -665,13 +659,13 @@
             if(appMode === 'QUICKS') {
                 startTxt = document.getElementById('in-pick-quicks').value.trim();
                 endTxt = document.getElementById('in-drop-quicks').value.trim();
-                if(!startTxt || !endTxt || !fareK) { showToast("CHECK INPUTS"); return; }
+                if(!startTxt || !endTxt || !fareK) { showToast("BAD INPUT"); return; }
                 startTxt = stripSido(startTxt); endTxt = stripSido(endTxt);
                 rSumm = `${extractSummaryStr(startTxt)} ➔ ${extractSummaryStr(endTxt)}`;
             } else {
                 startTxt = document.getElementById('in-pick-eats').value.trim();
                 endTxt = document.getElementById('in-drop-eats').value.trim();
-                if(!startTxt || !fareK) { showToast("CHECK INPUTS"); return; }
+                if(!startTxt || !fareK) { showToast("BAD INPUT"); return; }
                 startTxt = stripSido(startTxt); endTxt = stripSido(endTxt);
                 if(endTxt) rSumm = `${extractSummaryStr(startTxt)} ➔ ${extractSummaryStr(endTxt)}`;
                 else rSumm = `[${extractSummaryStr(startTxt) || startTxt}]`; 
@@ -689,7 +683,7 @@
             localStorage.setItem('qcp_orders_v130', JSON.stringify(orders));
 
             clearInputs(); renderMasterList(); updateSysTotal();
-            switchMainTab('lst', document.getElementById('nav-lst')); showToast("ORDER ADDED");
+            switchMainTab('lst', document.getElementById('nav-lst')); showToast("SAVED");
         }
 
         function toggleSelectMode() {
@@ -718,11 +712,11 @@
         }
 
         function deleteSelected() {
-            if(selectedSet.size === 0) { showToast("NO ITEMS SELECTED"); return; }
-            openConfirm(`DELETE ${selectedSet.size} ORDERS?`, () => {
+            if(selectedSet.size === 0) { showToast("NO SEL"); return; }
+            openConfirm(`DEL ${selectedSet.size} ITEMS?`, () => {
                 orders = orders.filter(o => !selectedSet.has(String(o.id)));
                 localStorage.setItem('qcp_orders_v130', JSON.stringify(orders));
-                toggleSelectMode(); renderStatsEngine(); updateSysTotal(); showToast("ORDERS DELETED");
+                toggleSelectMode(); renderStatsEngine(); updateSysTotal(); showToast("DELETED");
             });
         }
 
@@ -786,7 +780,7 @@
             let filtered = typeMatchedOrders.filter(o => currentListFilter === 'RUN' ? o.state !== 'FIN' : o.state === 'FIN');
             if (currentMasterSort === 'DESC') filtered.sort((a, b) => b.timestamp - a.timestamp); else if (currentMasterSort === 'ASC') filtered.sort((a, b) => a.timestamp - b.timestamp); 
 
-            if(filtered.length === 0) { list.innerHTML = `<div class="text-center text-bold" style="padding:30px; font-size:13px; color:var(--m3-outline);">NO ORDERS FOUND</div>`; return; }
+            if(filtered.length === 0) { list.innerHTML = `<div class="text-center text-bold" style="padding:30px; font-size:13px; color:var(--m3-outline);">EMPTY</div>`; return; }
             filtered.forEach((o) => {
                 const wrapper = document.createElement('div'); wrapper.className = "order-card-wrapper"; wrapper.setAttribute('data-id', o.id);
                 wrapper.innerHTML = buildOrderCardHtml(o, orders.length - orders.indexOf(o)); list.appendChild(wrapper);
@@ -796,8 +790,8 @@
         function stepState(id, e) {
             e.stopPropagation(); if(isSelectMode) { toggleSelect(id); return; } 
             const o = orders.find(x => String(x.id) === String(id)); let nextState = ''; let promptMsg = '';
-            if(o.state === 'RUN' || o.state === 'READY') { nextState = 'PICK'; promptMsg = 'CONFIRM PICKUP?'; } 
-            else if(o.state === 'PICK') { nextState = 'FIN'; promptMsg = 'MARK AS DONE?'; } 
+            if(o.state === 'RUN' || o.state === 'READY') { nextState = 'PICK'; promptMsg = 'PICKUP?'; } 
+            else if(o.state === 'PICK') { nextState = 'FIN'; promptMsg = 'DONE?'; } 
             
             if(!nextState) return;
 
@@ -811,10 +805,10 @@
 
         async function copyTodayData() {
             const todayOrders = orders.filter(o => o.state === 'FIN' && (currentTypeFilter === 'ALL' ? true : o.mode === currentTypeFilter));
-            if(todayOrders.length === 0) { showToast("NO ORDERS TO COPY"); return; }
+            if(todayOrders.length === 0) { showToast("EMPTY"); return; }
             let text = "PLAT\tPICKUP\tDROPOFF\tAMOUNT\tNOTE\n";
             todayOrders.forEach(o => text += `${o.platform}\t${o.startDetail}\t${o.endDetail||''}\t${Math.round(calcNetFare(o.fareK, o.platform) * 1000)}\t${o.memo || ''}\n`);
-            try { await navigator.clipboard.writeText(text); showToast("COPIED TO CLIPBOARD!"); } catch(e) { showToast("COPY FAILED"); }
+            try { await navigator.clipboard.writeText(text); showToast("COPIED"); } catch(e) { showToast("COPY ERR"); }
         }
 
         function openMng(id, e) {
@@ -843,7 +837,7 @@
                 if(eStr) o.routeSummary = `${extractSummaryStr(s) || s} ➔ ${extractSummaryStr(eStr) || eStr}`;
                 else o.routeSummary = `[${extractSummaryStr(s) || s}]`;
             }
-            localStorage.setItem('qcp_orders_v130', JSON.stringify(orders)); closeModal('popManage'); renderMasterList(); updateSysTotal(); showToast("ORDER UPDATED");
+            localStorage.setItem('qcp_orders_v130', JSON.stringify(orders)); closeModal('popManage'); renderMasterList(); updateSysTotal(); showToast("SAVED");
         }
 
         function selCostChip(el, tabType) { el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active')); el.classList.add('active'); }
@@ -853,7 +847,7 @@
             const memoInput = document.getElementById(type === 'EXP' ? 'exp-memo' : 'mnt-product');
             const amtK = parseFloat(amtInput.value) || 0;
             const activeChip = document.querySelector(type === 'EXP' ? '#exp-chips .chip.active' : '#mnt-chips .chip.active');
-            if(!amtK) { showToast("ENTER AMOUNT"); return; }
+            if(!amtK) { showToast("NO AMT"); return; }
 
             let record = { id: Date.now().toString(), timestamp: Date.now(), type, category: activeChip.innerText, amountK: amtK, memo: memoInput.value.trim() };
             
@@ -869,11 +863,11 @@
             amtInput.value = ''; memoInput.value = ''; 
             if(type === 'MNT') { document.getElementById('mnt-store').value = ''; document.getElementById('mnt-mileage').value = ''; }
             
-            renderCostRecords(type); showToast("RECORD ADDED");
+            renderCostRecords(type); showToast("SAVED");
         }
 
         function deleteCostRecord(id, type) {
-            openConfirm("DELETE RECORD?", () => {
+            openConfirm("DEL REC?", () => {
                 costs = costs.filter(c => String(c.id) !== String(id));
                 localStorage.setItem('qcp_costs_v130', JSON.stringify(costs));
                 renderCostRecords(type); showToast("DELETED");
@@ -896,7 +890,6 @@
                     let nextOilStr = '';
                     if (c.mileage && oilInterval > 0) {
                         let curMil = parseInt(c.mileage);
-                        // v1.6.9 개정: NEXT OIL -> NEXT
                         if (!isNaN(curMil)) nextOilStr = ` | NEXT: ${curMil + oilInterval}km`;
                     }
                     return `
@@ -958,21 +951,17 @@
             if(id === 'exp' || id === 'mnt') renderCostRecords(id.toUpperCase()); if(id === 'stt') renderStatsEngine();
         }
 
-        /* ==========================================================================
-           v1.6.9 Touch Swipe Navigation (ORD <-> LST)
-        ========================================================================== */
         let touchstartX = 0; let touchstartY = 0; let touchendX = 0; let touchendY = 0;
         function handleGesture() {
             const xDiff = touchendX - touchstartX;
             const yDiff = touchendY - touchstartY;
-            // X축 이동 거리가 Y축 스크롤 거리보다 크고, 70px 이상일 경우에만 작동 (오작동 방지)
             if (Math.abs(xDiff) > Math.abs(yDiff) && Math.abs(xDiff) > 70) {
-                if (xDiff < 0) { // 왼쪽으로 스와이프 (←)
+                if (xDiff < 0) {
                     if (document.getElementById('view-ord').classList.contains('active')) {
                         switchMainTab('lst', document.getElementById('nav-lst'));
                     }
                 }
-                if (xDiff > 0) { // 오른쪽으로 스와이프 (→)
+                if (xDiff > 0) {
                     if (document.getElementById('view-lst').classList.contains('active')) {
                         switchMainTab('ord', document.getElementById('nav-ord'));
                     }
